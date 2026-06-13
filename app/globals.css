@@ -1,0 +1,99 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+
+  /* WIN24 brand palette */
+  --color-win-bg: #0d1117;
+  --color-win-sidebar: #111827;
+  --color-win-navbar: #1a2332;
+  --color-win-card: #1e2d3d;
+  --color-win-gold: #f5a623;
+  --color-win-cyan: #00bfff;
+  --color-win-orange: #ff6b00;
+  --color-win-text: #ffffff;
+  --color-win-muted: #8b9ab0;
+  --color-win-border: #2a3f55;
+  --color-win-rowborder: #1a2a3a;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  color-scheme: dark;
+  --background: #0d1117;
+  --foreground: #ffffff;
+  --card: #1e2d3d;
+  --card-foreground: #ffffff;
+  --popover: #1a2332;
+  --popover-foreground: #ffffff;
+  --primary: #f5a623;
+  --primary-foreground: #0d1117;
+  --secondary: #1e2d3d;
+  --secondary-foreground: #ffffff;
+  --muted: #1e2d3d;
+  --muted-foreground: #8b9ab0;
+  --accent: #00bfff;
+  --accent-foreground: #0d1117;
+  --destructive: #e5484d;
+  --border: #2a3f55;
+  --input: #2a3f55;
+  --ring: #f5a623;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Thin custom scrollbar */
+.win-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3f55 #0d1117;
+}
+.win-scroll::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.win-scroll::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+.win-scroll::-webkit-scrollbar-thumb {
+  background: #2a3f55;
+  border-radius: 9999px;
+}
