@@ -4,6 +4,8 @@ export type Evento = {
   deporte: string
   estado: string
   fechaEvento?: string
+  equipoLocal?: string
+  equipoVisitante?: string
 }
 
 export type Mercado = {
@@ -21,18 +23,18 @@ export type Usuario = {
 
 export type OpcionApuesta = {
   id: number
+  nombre: string
   cuotaActual: number
+  mercado: Mercado
 }
 
 export type Apuesta = {
   id: number
   apostador: Usuario
-  opcionApuesta: OpcionApuesta
+  opcion: OpcionApuesta
   cuotaCongelada: number
   monto: number
   estado: string
-  partido?: string
-  seleccion?: string
 }
 
 export type MovimientoSaldo = {

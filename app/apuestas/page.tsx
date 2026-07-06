@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
 import { BASE_URL, fetcher, formatCOP, postJSON } from '@/lib/api'
-import type { Apuesta, Usuario } from '@/lib/types'
+import type { Apuesta, Evento, Usuario } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import {
   EmptyState,
@@ -13,6 +13,13 @@ import {
   StatusBadge,
   buttonGold,
 } from '@/components/win/shared'
+
+function nombreEvento(evento: Evento): string {
+  if (evento.equipoLocal && evento.equipoVisitante) {
+    return `${evento.equipoLocal} vs ${evento.equipoVisitante}`
+  }
+  return evento.nombre
+}
 
 export default function ApuestasPage() {
   const { data, isLoading } = useSWR<Apuesta[]>(
@@ -83,10 +90,12 @@ export default function ApuestasPage() {
                   className="border-b border-[#1a2a3a] transition hover:bg-[#1a2332]"
                 >
                   <td className="px-4 py-3 text-sm font-medium text-white">
-                    {a.partido || '—'}
+                    {a.opcion?.mercado?.evento
+                      ? nombreEvento(a.opcion.mercado.evento)
+                      : '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-[#8b9ab0]">
-                    {a.seleccion || '—'}
+                    {a.opcion?.nombre || '—'}
                   </td>
                   <td className="px-4 py-3 text-sm font-bold text-[#00bfff]">
                     {a.cuotaCongelada.toFixed(2)}
