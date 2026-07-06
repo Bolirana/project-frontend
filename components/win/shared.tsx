@@ -66,8 +66,10 @@ export function SkeletonRows({ rows = 6 }: { rows?: number }) {
 
 const STATUS_STYLES: Record<string, string> = {
   PENDIENTE: 'bg-[#f5a623]/15 text-[#f5a623]',
+  REGISTRADA: 'bg-[#f5a623]/15 text-[#f5a623]',
   GANADA: 'bg-emerald-500/15 text-emerald-400',
   PERDIDA: 'bg-red-500/15 text-red-400',
+  PAGADA: 'bg-[#00bfff]/15 text-[#00bfff]',
   EN_VIVO: 'bg-red-500/15 text-red-400',
   PROGRAMADO: 'bg-[#00bfff]/15 text-[#00bfff]',
   FINALIZADO: 'bg-[#8b9ab0]/15 text-[#8b9ab0]',

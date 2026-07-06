@@ -80,7 +80,7 @@ export default function MovimientosPage() {
           <option value="">Todos</option>
           {usuarios?.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.nombre}
+              {u.nombreCompleto}
             </option>
           ))}
         </select>
@@ -123,11 +123,11 @@ export default function MovimientosPage() {
                   {m.tipo === 'DEPOSITO' ? 'Depósito' : 'Retiro'}
                 </p>
                 <p className="truncate text-xs text-[#8b9ab0]">
-                  {m.usuario.nombre} · {formatFecha(m.fecha)}
+                  {m.usuario.nombreCompleto} · {formatFecha(m.creadoEn)}
                 </p>
               </div>
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0d1117] text-xs font-bold text-[#f5a623]">
-                {initials(m.usuario.nombre)}
+                {initials(m.usuario.nombreCompleto)}
               </span>
               <span
                 className={cn(
@@ -156,7 +156,7 @@ export default function MovimientosPage() {
               <option value="">Selecciona un usuario</option>
               {usuarios?.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.nombre}
+                  {u.nombreCompleto}
                 </option>
               ))}
             </select>

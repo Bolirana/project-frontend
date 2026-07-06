@@ -49,7 +49,7 @@ function MatchRow({ evento }: { evento: Evento }) {
         <div className="mb-1">
           <StatusBadge estado={evento.estado} />
         </div>
-        <p className="text-xs text-[#8b9ab0]">{formatHora(evento.fecha)}</p>
+        <p className="text-xs text-[#8b9ab0]">{formatHora(evento.fechaEvento)}</p>
       </div>
 
       {/* Partido */}

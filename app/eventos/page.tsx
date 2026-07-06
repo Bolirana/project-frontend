@@ -79,7 +79,7 @@ export default function EventosPage() {
               <div className="w-32 shrink-0">
                 <StatusBadge estado={evento.estado} />
                 <p className="mt-1 text-xs text-[#8b9ab0]">
-                  {formatHora(evento.fecha)}
+                  {formatHora(evento.fechaEvento)}
                 </p>
               </div>
               <div className="min-w-[180px] flex-1">

@@ -19,26 +19,30 @@ export default function UsuariosPage() {
     fetcher,
   )
   const [open, setOpen] = useState(false)
-  const [nombre, setNombre] = useState('')
+  const [nombreCompleto, setNombreCompleto] = useState('')
   const [correo, setCorreo] = useState('')
-  const [saldo, setSaldo] = useState('')
+  const [contrasena, setContrasena] = useState('')
+  const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!nombre.trim() || !correo.trim()) return
+    if (!nombreCompleto.trim() || !correo.trim() || !contrasena.trim() || !fechaNacimiento)
+      return
     setSaving(true)
     try {
-      await postJSON(`${BASE_URL}/usuarios`, {
-        nombre,
+      await postJSON(`${BASE_URL}/usuarios/registro`, {
+        nombreCompleto,
         correo,
-        saldo: Number(saldo || 0),
+        contrasena,
+        fechaNacimiento,
       })
       await mutate(`${BASE_URL}/usuarios`)
       setOpen(false)
-      setNombre('')
+      setNombreCompleto('')
       setCorreo('')
-      setSaldo('')
+      setContrasena('')
+      setFechaNacimiento('')
     } finally {
       setSaving(false)
     }
@@ -75,10 +79,10 @@ export default function UsuariosPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f5a623] text-sm font-bold text-black">
-                        {initials(u.nombre)}
+                        {initials(u.nombreCompleto)}
                       </span>
                       <span className="text-sm font-medium text-white">
-                        {u.nombre}
+                        {u.nombreCompleto}
                       </span>
                     </div>
                   </td>
@@ -107,12 +111,12 @@ export default function UsuariosPage() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nuevo Usuario">
         <form onSubmit={submit}>
-          <Field label="Nombre">
+          <Field label="Nombre completo">
             <input
               className={inputClass}
               placeholder="Ej: Carlos Ramírez"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
+              value={nombreCompleto}
+              onChange={(e) => setNombreCompleto(e.target.value)}
             />
           </Field>
           <Field label="Correo">
@@ -124,13 +128,21 @@ export default function UsuariosPage() {
               onChange={(e) => setCorreo(e.target.value)}
             />
           </Field>
-          <Field label="Saldo inicial (COP)">
+          <Field label="Contraseña">
             <input
-              type="number"
+              type="password"
               className={inputClass}
-              placeholder="0"
-              value={saldo}
-              onChange={(e) => setSaldo(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              value={contrasena}
+              onChange={(e) => setContrasena(e.target.value)}
+            />
+          </Field>
+          <Field label="Fecha de nacimiento">
+            <input
+              type="date"
+              className={inputClass}
+              value={fechaNacimiento}
+              onChange={(e) => setFechaNacimiento(e.target.value)}
             />
           </Field>
           <button type="submit" disabled={saving} className={buttonGold('w-full')}>

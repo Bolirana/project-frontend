@@ -3,7 +3,7 @@ export type Evento = {
   nombre: string
   deporte: string
   estado: string
-  fecha?: string
+  fechaEvento?: string
 }
 
 export type Mercado = {
@@ -15,7 +15,7 @@ export type Mercado = {
 
 export type Usuario = {
   id: number
-  nombre: string
+  nombreCompleto: string
   correo: string
   saldo: number
 }
@@ -41,5 +41,5 @@ export type MovimientoSaldo = {
   usuario: Usuario
   tipo: string
   monto: number
-  fecha?: string
+  creadoEn?: string
 }

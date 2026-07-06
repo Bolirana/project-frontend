@@ -39,7 +39,7 @@ export default function ApuestasPage() {
         cuota: Number(cuota),
         monto: Number(monto),
         usuarioId: usuarioId ? Number(usuarioId) : undefined,
-        estado: 'PENDIENTE',
+        estado: 'REGISTRADA',
       })
       await mutate(`${BASE_URL}/apuestas`)
       setOpen(false)
@@ -141,7 +141,7 @@ export default function ApuestasPage() {
               <option value="">Selecciona un usuario</option>
               {usuarios?.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.nombre}
+                  {u.nombreCompleto}
                 </option>
               ))}
             </select>
