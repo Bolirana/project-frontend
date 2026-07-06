@@ -9,7 +9,6 @@ export type Evento = {
 export type Mercado = {
   id: number
   nombre: string
-  descripcion: string
   evento: Evento
 }
 

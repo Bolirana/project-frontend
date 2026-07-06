@@ -39,19 +39,30 @@ export default function MovimientosPage() {
 
   const [open, setOpen] = useState(false)
   const [formUsuario, setFormUsuario] = useState('')
-  const [tipo, setTipo] = useState('DEPOSITO')
+  const [tipo, setTipo] = useState('RECARGA')
+  const [metodoPago, setMetodoPago] = useState('NEQUI')
   const [monto, setMonto] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (!formUsuario) return
     setSaving(true)
     try {
-      await postJSON(`${BASE_URL}/movimientos`, {
-        usuarioId: formUsuario ? Number(formUsuario) : undefined,
-        tipo,
-        monto: Number(monto),
-      })
+      const usuarioId = Number(formUsuario)
+      const montoNum = Number(monto)
+      if (tipo === 'RECARGA') {
+        await postJSON(`${BASE_URL}/movimientos/recargar`, {
+          usuarioId,
+          monto: montoNum,
+          metodoPago,
+        })
+      } else {
+        await postJSON(`${BASE_URL}/movimientos/retirar`, {
+          usuarioId,
+          monto: montoNum,
+        })
+      }
       await mutate(key)
       await mutate(`${BASE_URL}/usuarios`)
       setOpen(false)
@@ -93,7 +104,7 @@ export default function MovimientosPage() {
 
       <div className="space-y-2">
         {data?.map((m) => {
-          const isDeposito = m.tipo === 'DEPOSITO'
+          const isDeposito = m.tipo === 'RECARGA'
           return (
             <div
               key={m.id}
@@ -120,7 +131,7 @@ export default function MovimientosPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-white">
-                  {m.tipo === 'DEPOSITO' ? 'Depósito' : 'Retiro'}
+                  {m.tipo === 'RECARGA' ? 'Depósito' : 'Retiro'}
                 </p>
                 <p className="truncate text-xs text-[#8b9ab0]">
                   {m.usuario.nombreCompleto} · {formatFecha(m.creadoEn)}
@@ -167,10 +178,23 @@ export default function MovimientosPage() {
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
             >
-              <option value="DEPOSITO">Depósito</option>
+              <option value="RECARGA">Depósito</option>
               <option value="RETIRO">Retiro</option>
             </select>
           </Field>
+          {tipo === 'RECARGA' && (
+            <Field label="Método de pago">
+              <select
+                className={inputClass}
+                value={metodoPago}
+                onChange={(e) => setMetodoPago(e.target.value)}
+              >
+                <option value="NEQUI">Nequi</option>
+                <option value="PSE">PSE</option>
+                <option value="TARJETA">Tarjeta</option>
+              </select>
+            </Field>
+          )}
           <Field label="Monto (COP)">
             <input
               type="number"

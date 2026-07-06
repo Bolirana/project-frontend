@@ -27,30 +27,78 @@ function formatHora(fecha?: string) {
   })
 }
 
+type OpcionForm = { nombre: string; cuotaActual: string }
+
+const OPCIONES_INICIALES: OpcionForm[] = [
+  { nombre: 'Local', cuotaActual: '' },
+  { nombre: 'Visitante', cuotaActual: '' },
+]
+
 export default function EventosPage() {
   const { data, isLoading } = useSWR<Evento[]>(`${BASE_URL}/eventos`, fetcher)
   const [open, setOpen] = useState(false)
-  const [nombre, setNombre] = useState('')
-  const [estado, setEstado] = useState('PROGRAMADO')
-  const [fecha, setFecha] = useState('')
+  const [equipoLocal, setEquipoLocal] = useState('')
+  const [equipoVisitante, setEquipoVisitante] = useState('')
+  const [fechaEvento, setFechaEvento] = useState('')
+  const [mercadoNombre, setMercadoNombre] = useState('Resultado Final')
+  const [opciones, setOpciones] = useState<OpcionForm[]>(OPCIONES_INICIALES)
   const [saving, setSaving] = useState(false)
+
+  function updateOpcion(index: number, campo: keyof OpcionForm, valor: string) {
+    setOpciones((prev) =>
+      prev.map((o, i) => (i === index ? { ...o, [campo]: valor } : o)),
+    )
+  }
+
+  function addOpcion() {
+    setOpciones((prev) => [...prev, { nombre: '', cuotaActual: '' }])
+  }
+
+  function removeOpcion(index: number) {
+    setOpciones((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function resetForm() {
+    setEquipoLocal('')
+    setEquipoVisitante('')
+    setFechaEvento('')
+    setMercadoNombre('Resultado Final')
+    setOpciones(OPCIONES_INICIALES)
+  }
+
+  const opcionesValidas = opciones.filter(
+    (o) => o.nombre.trim() && Number(o.cuotaActual) > 1.0,
+  )
+  const formValido =
+    equipoLocal.trim() &&
+    equipoVisitante.trim() &&
+    fechaEvento &&
+    mercadoNombre.trim() &&
+    opcionesValidas.length > 0
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!nombre.trim()) return
+    if (!formValido) return
     setSaving(true)
     try {
       await postJSON(`${BASE_URL}/eventos`, {
-        nombre,
+        equipoLocal,
+        equipoVisitante,
         deporte: 'Fútbol',
-        estado,
-        fecha: fecha || new Date().toISOString(),
+        fechaEvento,
+        mercados: [
+          {
+            nombre: mercadoNombre,
+            opciones: opcionesValidas.map((o) => ({
+              nombre: o.nombre,
+              cuotaActual: Number(o.cuotaActual),
+            })),
+          },
+        ],
       })
       await mutate(`${BASE_URL}/eventos`)
       setOpen(false)
-      setNombre('')
-      setFecha('')
-      setEstado('PROGRAMADO')
+      resetForm()
     } finally {
       setSaving(false)
     }
@@ -106,34 +154,87 @@ export default function EventosPage() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Nuevo Evento">
         <form onSubmit={submit}>
-          <Field label="Nombre del partido">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Equipo local">
+              <input
+                className={inputClass}
+                placeholder="Ej: Colombia"
+                value={equipoLocal}
+                onChange={(e) => setEquipoLocal(e.target.value)}
+              />
+            </Field>
+            <Field label="Equipo visitante">
+              <input
+                className={inputClass}
+                placeholder="Ej: Brasil"
+                value={equipoVisitante}
+                onChange={(e) => setEquipoVisitante(e.target.value)}
+              />
+            </Field>
+          </div>
+          <Field label="Fecha del evento">
             <input
+              type="date"
               className={inputClass}
-              placeholder="Ej: Colombia vs Brasil"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
+              value={fechaEvento}
+              onChange={(e) => setFechaEvento(e.target.value)}
             />
           </Field>
-          <Field label="Estado">
-            <select
+          <Field label="Nombre del mercado">
+            <input
               className={inputClass}
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
+              placeholder="Ej: Resultado Final 1X2"
+              value={mercadoNombre}
+              onChange={(e) => setMercadoNombre(e.target.value)}
+            />
+          </Field>
+          <div className="mb-3 space-y-2">
+            <p className="text-xs font-bold uppercase text-[#f5a623]">
+              Opciones de apuesta
+            </p>
+            {opciones.map((o, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  className={inputClass}
+                  placeholder="Ej: Local"
+                  value={o.nombre}
+                  onChange={(e) => updateOpcion(i, 'nombre', e.target.value)}
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="1.01"
+                  className={inputClass}
+                  placeholder="Cuota"
+                  value={o.cuotaActual}
+                  onChange={(e) =>
+                    updateOpcion(i, 'cuotaActual', e.target.value)
+                  }
+                />
+                {opciones.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeOpcion(i)}
+                    className="shrink-0 px-2 text-xs text-[#8b9ab0] hover:text-white"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addOpcion}
+              className="text-xs font-semibold text-[#00bfff] hover:underline"
             >
-              <option value="PROGRAMADO">Programado</option>
-              <option value="EN_VIVO">En vivo</option>
-              <option value="FINALIZADO">Finalizado</option>
-            </select>
-          </Field>
-          <Field label="Fecha y hora">
-            <input
-              type="datetime-local"
-              className={inputClass}
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-            />
-          </Field>
-          <button type="submit" disabled={saving} className={buttonGold('w-full')}>
+              + Agregar opción
+            </button>
+          </div>
+          <button
+            type="submit"
+            disabled={saving || !formValido}
+            className={buttonGold('w-full')}
+          >
             {saving ? 'Guardando...' : 'Crear Evento'}
           </button>
         </form>

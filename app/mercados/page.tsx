@@ -23,24 +23,22 @@ export default function MercadosPage() {
 
   const [open, setOpen] = useState(false)
   const [nombre, setNombre] = useState('')
-  const [descripcion, setDescripcion] = useState('')
   const [eventoId, setEventoId] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    if (!nombre.trim()) return
+    if (!nombre.trim() || !eventoId) return
     setSaving(true)
     try {
       await postJSON(`${BASE_URL}/mercados`, {
         nombre,
-        descripcion,
-        eventoId: eventoId ? Number(eventoId) : undefined,
+        evento: { id: Number(eventoId) },
       })
       await mutate(`${BASE_URL}/mercados`)
       setOpen(false)
       setNombre('')
-      setDescripcion('')
+      setEventoId('')
     } finally {
       setSaving(false)
     }
@@ -70,8 +68,7 @@ export default function MercadosPage() {
               </h3>
               <StatusBadge estado={m.evento.estado} />
             </div>
-            <p className="mb-3 text-xs text-[#8b9ab0]">{m.descripcion}</p>
-            <div className="border-t border-[#2a3f55] pt-2">
+            <div className="mt-1 border-t border-[#2a3f55] pt-2">
               <p className="text-[11px] font-bold uppercase text-[#f5a623]">
                 Evento
               </p>
@@ -91,14 +88,6 @@ export default function MercadosPage() {
               placeholder="Ej: Resultado Final 1X2"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-            />
-          </Field>
-          <Field label="Descripción">
-            <input
-              className={inputClass}
-              placeholder="Ej: Gana local, empate o gana visitante"
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
             />
           </Field>
           <Field label="Evento">
