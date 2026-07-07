@@ -41,6 +41,7 @@ export default function MovimientosPage() {
   const [formUsuario, setFormUsuario] = useState('')
   const [tipo, setTipo] = useState('RECARGA')
   const [metodoPago, setMetodoPago] = useState('NEQUI')
+  const [cuentaDestino, setCuentaDestino] = useState('')
   const [monto, setMonto] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -48,6 +49,7 @@ export default function MovimientosPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!formUsuario) return
+    if (tipo === 'RETIRO' && !cuentaDestino.trim()) return
     setSaving(true)
     setError('')
     try {
@@ -63,12 +65,14 @@ export default function MovimientosPage() {
         await postJSON(`${BASE_URL}/movimientos/retirar`, {
           usuarioId,
           monto: montoNum,
+          metodoPago,
         })
       }
       await mutate(key)
       await mutate(`${BASE_URL}/usuarios`)
       setOpen(false)
       setMonto('')
+      setCuentaDestino('')
     } catch (err) {
       setError(mensajeError(err, 'registrar el movimiento'))
     } finally {
@@ -165,6 +169,7 @@ export default function MovimientosPage() {
         onClose={() => {
           setOpen(false)
           setError('')
+          setCuentaDestino('')
         }}
         title="Nuevo Movimiento"
       >
@@ -193,17 +198,25 @@ export default function MovimientosPage() {
               <option value="RETIRO">Retiro</option>
             </select>
           </Field>
-          {tipo === 'RECARGA' && (
-            <Field label="Método de pago">
-              <select
+          <Field label={tipo === 'RECARGA' ? 'Método de pago' : 'Método de retiro'}>
+            <select
+              className={inputClass}
+              value={metodoPago}
+              onChange={(e) => setMetodoPago(e.target.value)}
+            >
+              <option value="NEQUI">Nequi</option>
+              <option value="PSE">PSE</option>
+              <option value="TARJETA">Tarjeta</option>
+            </select>
+          </Field>
+          {tipo === 'RETIRO' && (
+            <Field label="Número de cuenta / celular">
+              <input
                 className={inputClass}
-                value={metodoPago}
-                onChange={(e) => setMetodoPago(e.target.value)}
-              >
-                <option value="NEQUI">Nequi</option>
-                <option value="PSE">PSE</option>
-                <option value="TARJETA">Tarjeta</option>
-              </select>
+                placeholder="Ej: 3001234567"
+                value={cuentaDestino}
+                onChange={(e) => setCuentaDestino(e.target.value)}
+              />
             </Field>
           )}
           <Field label="Monto (COP)">
@@ -220,7 +233,11 @@ export default function MovimientosPage() {
               {error}
             </p>
           )}
-          <button type="submit" disabled={saving} className={buttonGold('w-full')}>
+          <button
+            type="submit"
+            disabled={saving || (tipo === 'RETIRO' && !cuentaDestino.trim())}
+            className={buttonGold('w-full')}
+          >
             {saving ? 'Guardando...' : 'Registrar Movimiento'}
           </button>
         </form>
