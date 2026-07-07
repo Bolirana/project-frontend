@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Dices, Trophy, type LucideIcon } from 'lucide-react'
 import { BASE_URL, fetcher, formatCOP, initials, mensajeError, postJSON } from '@/lib/api'
 import type { MovimientoSaldo, Usuario } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
@@ -14,6 +14,59 @@ import {
   buttonGold,
 } from '@/components/win/shared'
 import { cn } from '@/lib/utils'
+
+type EstiloMovimiento = {
+  label: string
+  icon: LucideIcon
+  signo: '+' | '-'
+  border: string
+  bg: string
+  text: string
+}
+
+const ESTILOS_MOVIMIENTO: Record<string, EstiloMovimiento> = {
+  RECARGA: {
+    label: 'Depósito',
+    icon: ArrowDownLeft,
+    signo: '+',
+    border: 'border-l-emerald-500',
+    bg: 'bg-emerald-500/15',
+    text: 'text-emerald-400',
+  },
+  RETIRO: {
+    label: 'Retiro',
+    icon: ArrowUpRight,
+    signo: '-',
+    border: 'border-l-red-500',
+    bg: 'bg-red-500/15',
+    text: 'text-red-400',
+  },
+  APUESTA: {
+    label: 'Apuesta',
+    icon: Dices,
+    signo: '-',
+    border: 'border-l-orange-500',
+    bg: 'bg-orange-500/15',
+    text: 'text-orange-400',
+  },
+  PAGO_APUESTA: {
+    label: 'Ganancia',
+    icon: Trophy,
+    signo: '+',
+    border: 'border-l-emerald-500',
+    bg: 'bg-emerald-500/15',
+    text: 'text-emerald-400',
+  },
+}
+
+const ESTILO_DEFECTO: EstiloMovimiento = {
+  label: 'Movimiento',
+  icon: ArrowUpRight,
+  signo: '-',
+  border: 'border-l-[#2a3f55]',
+  bg: 'bg-[#2a3f55]/40',
+  text: 'text-[#8b9ab0]',
+}
 
 function formatFecha(fecha?: string) {
   if (!fecha) return ''
@@ -112,34 +165,28 @@ export default function MovimientosPage() {
 
       <div className="space-y-2">
         {data?.map((m) => {
-          const isDeposito = m.tipo === 'RECARGA'
+          const estilo = ESTILOS_MOVIMIENTO[m.tipo] ?? ESTILO_DEFECTO
+          const Icono = estilo.icon
           return (
             <div
               key={m.id}
               className={cn(
                 'flex items-center gap-4 rounded-lg border-l-4 bg-[#1e2d3d] px-4 py-3',
-                isDeposito
-                  ? 'border-l-emerald-500'
-                  : 'border-l-red-500',
+                estilo.border,
               )}
             >
               <span
                 className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                  isDeposito
-                    ? 'bg-emerald-500/15 text-emerald-400'
-                    : 'bg-red-500/15 text-red-400',
+                  estilo.bg,
+                  estilo.text,
                 )}
               >
-                {isDeposito ? (
-                  <ArrowDownLeft className="h-5 w-5" />
-                ) : (
-                  <ArrowUpRight className="h-5 w-5" />
-                )}
+                <Icono className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-white">
-                  {m.tipo === 'RECARGA' ? 'Depósito' : 'Retiro'}
+                  {estilo.label}
                 </p>
                 <p className="truncate text-xs text-[#8b9ab0]">
                   {m.usuario.nombreCompleto} · {formatFecha(m.creadoEn)}
@@ -148,13 +195,8 @@ export default function MovimientosPage() {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0d1117] text-xs font-bold text-[#f5a623]">
                 {initials(m.usuario.nombreCompleto)}
               </span>
-              <span
-                className={cn(
-                  'shrink-0 text-sm font-bold',
-                  isDeposito ? 'text-emerald-400' : 'text-red-400',
-                )}
-              >
-                {isDeposito ? '+' : '-'}
+              <span className={cn('shrink-0 text-sm font-bold', estilo.text)}>
+                {estilo.signo}
                 {formatCOP(m.monto)}
               </span>
             </div>
