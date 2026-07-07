@@ -195,7 +195,7 @@ export default function MovimientosPage() {
               onChange={(e) => {
                 const nuevoTipo = e.target.value
                 setTipo(nuevoTipo)
-                if (nuevoTipo === 'RETIRO' && metodoPago === 'PSE') {
+                if (nuevoTipo === 'RETIRO' && metodoPago !== 'NEQUI') {
                   setMetodoPago('NEQUI')
                 }
               }}
@@ -212,7 +212,7 @@ export default function MovimientosPage() {
             >
               <option value="NEQUI">Nequi</option>
               {tipo === 'RECARGA' && <option value="PSE">PSE</option>}
-              <option value="TARJETA">Tarjeta</option>
+              {tipo === 'RECARGA' && <option value="TARJETA">Tarjeta</option>}
             </select>
           </Field>
           {tipo === 'RETIRO' && (
