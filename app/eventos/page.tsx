@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { BASE_URL, fetcher, goalsOdds, oddsFor, postJSON, splitTeams } from '@/lib/api'
+import { BASE_URL, fetcher, goalsOdds, mensajeError, oddsFor, postJSON, splitTeams } from '@/lib/api'
 import type { Evento } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import { OddsButton } from '@/components/win/odds-button'
@@ -43,6 +43,7 @@ export default function EventosPage() {
   const [mercadoNombre, setMercadoNombre] = useState('Resultado Final')
   const [opciones, setOpciones] = useState<OpcionForm[]>(OPCIONES_INICIALES)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   function updateOpcion(index: number, campo: keyof OpcionForm, valor: string) {
     setOpciones((prev) =>
@@ -80,6 +81,7 @@ export default function EventosPage() {
     e.preventDefault()
     if (!formValido) return
     setSaving(true)
+    setError('')
     try {
       await postJSON(`${BASE_URL}/eventos`, {
         equipoLocal,
@@ -99,6 +101,8 @@ export default function EventosPage() {
       await mutate(`${BASE_URL}/eventos`)
       setOpen(false)
       resetForm()
+    } catch (err) {
+      setError(mensajeError(err, 'registrar el evento'))
     } finally {
       setSaving(false)
     }
@@ -152,7 +156,14 @@ export default function EventosPage() {
 
       <FloatingAddButton label="Nuevo Evento" onClick={() => setOpen(true)} />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nuevo Evento">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false)
+          setError('')
+        }}
+        title="Nuevo Evento"
+      >
         <form onSubmit={submit}>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Equipo local">
@@ -230,6 +241,11 @@ export default function EventosPage() {
               + Agregar opción
             </button>
           </div>
+          {error && (
+            <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </p>
+          )}
           <button
             type="submit"
             disabled={saving || !formValido}

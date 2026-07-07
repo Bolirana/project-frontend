@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { BASE_URL, fetcher, formatCOP, postJSON } from '@/lib/api'
+import { BASE_URL, fetcher, formatCOP, mensajeError, postJSON } from '@/lib/api'
 import type { Apuesta, Evento, Usuario } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import {
@@ -36,6 +36,7 @@ export default function ApuestasPage() {
   const [opcionId, setOpcionId] = useState('')
   const [monto, setMonto] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const eventosAbiertos = eventos?.filter((e) => e.estado === 'ABIERTO') ?? []
   const mercados =
@@ -55,6 +56,7 @@ export default function ApuestasPage() {
     e.preventDefault()
     if (!usuarioId || !opcionId || !monto) return
     setSaving(true)
+    setError('')
     try {
       await postJSON(`${BASE_URL}/apuestas`, {
         apostador: { id: Number(usuarioId) },
@@ -64,6 +66,8 @@ export default function ApuestasPage() {
       await mutate(`${BASE_URL}/apuestas`)
       setOpen(false)
       resetForm()
+    } catch (err) {
+      setError(mensajeError(err, 'registrar la apuesta'))
     } finally {
       setSaving(false)
     }
@@ -138,6 +142,7 @@ export default function ApuestasPage() {
         onClose={() => {
           setOpen(false)
           resetForm()
+          setError('')
         }}
         title="Nueva Apuesta"
       >
@@ -216,6 +221,11 @@ export default function ApuestasPage() {
               onChange={(e) => setMonto(e.target.value)}
             />
           </Field>
+          {error && (
+            <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </p>
+          )}
           <button
             type="submit"
             disabled={saving || !usuarioId || !opcionId || !monto}

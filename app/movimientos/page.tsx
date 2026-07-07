@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
-import { BASE_URL, fetcher, formatCOP, initials, postJSON } from '@/lib/api'
+import { BASE_URL, fetcher, formatCOP, initials, mensajeError, postJSON } from '@/lib/api'
 import type { MovimientoSaldo, Usuario } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import {
@@ -43,11 +43,13 @@ export default function MovimientosPage() {
   const [metodoPago, setMetodoPago] = useState('NEQUI')
   const [monto, setMonto] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!formUsuario) return
     setSaving(true)
+    setError('')
     try {
       const usuarioId = Number(formUsuario)
       const montoNum = Number(monto)
@@ -67,6 +69,8 @@ export default function MovimientosPage() {
       await mutate(`${BASE_URL}/usuarios`)
       setOpen(false)
       setMonto('')
+    } catch (err) {
+      setError(mensajeError(err, 'registrar el movimiento'))
     } finally {
       setSaving(false)
     }
@@ -156,7 +160,14 @@ export default function MovimientosPage() {
 
       <FloatingAddButton label="Nuevo Movimiento" onClick={() => setOpen(true)} />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nuevo Movimiento">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false)
+          setError('')
+        }}
+        title="Nuevo Movimiento"
+      >
         <form onSubmit={submit}>
           <Field label="Usuario">
             <select
@@ -204,6 +215,11 @@ export default function MovimientosPage() {
               onChange={(e) => setMonto(e.target.value)}
             />
           </Field>
+          {error && (
+            <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </p>
+          )}
           <button type="submit" disabled={saving} className={buttonGold('w-full')}>
             {saving ? 'Guardando...' : 'Registrar Movimiento'}
           </button>

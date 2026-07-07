@@ -2,6 +2,45 @@
 // the WIN24 Spring Boot backend at http://localhost:8080/api.
 export const BASE_URL = '/api'
 
+// El backend responde los errores manejados (400/404/409/...) con un cuerpo
+// { mensaje: string, ... } (ver GlobalExceptionHandler). ApiError guarda el
+// status y, si vino, ese mensaje, sin cambiar `message` (se mantiene como
+// `Error ${status}` por compatibilidad con código que ya lo parseaba así).
+export class ApiError extends Error {
+  status: number
+  backendMessage?: string
+
+  constructor(status: number, backendMessage?: string) {
+    super(`Error ${status}`)
+    this.name = 'ApiError'
+    this.status = status
+    this.backendMessage = backendMessage
+  }
+}
+
+async function mensajeDelBackend(res: Response): Promise<string | undefined> {
+  try {
+    const data = await res.json()
+    return typeof data?.mensaje === 'string' ? data.mensaje : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Traduce un error de una llamada a la API a un mensaje de UI. `accion` describe
+// la operación en curso (ej. "registrar la apuesta") para armar el mensaje 400 genérico.
+export function mensajeError(err: unknown, accion: string): string {
+  if (err instanceof ApiError) {
+    if (err.status === 400) {
+      return err.backendMessage || `No se pudo ${accion}. Verifica los datos.`
+    }
+    if (err.status === 500) {
+      return 'Error del servidor. Intenta de nuevo.'
+    }
+  }
+  return `No se pudo ${accion}.`
+}
+
 export async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Error ${res.status}`)
@@ -14,7 +53,7 @@ export async function postJSON<T>(url: string, body: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Error ${res.status}`)
+  if (!res.ok) throw new ApiError(res.status, await mensajeDelBackend(res))
   return res.json() as Promise<T>
 }
 
