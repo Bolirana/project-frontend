@@ -24,6 +24,7 @@ export type Usuario = {
   nombreCompleto: string
   correo: string
   saldo: number
+  estado: 'ACTIVO' | 'SUSPENDIDO' | 'ELIMINADO'
 }
 
 export type OpcionApuesta = {

@@ -18,6 +18,18 @@ export async function postJSON<T>(url: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export async function patchJSON<T>(url: string): Promise<T> {
+  const res = await fetch(url, { method: 'PATCH' })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+export async function del<T>(url: string): Promise<T> {
+  const res = await fetch(url, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  return res.json() as Promise<T>
+}
+
 export function formatCOP(value: number): string {
   return `$ ${new Intl.NumberFormat('es-CO').format(Math.round(value))} COP`
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { BASE_URL, fetcher, formatCOP, initials, postJSON } from '@/lib/api'
+import { BASE_URL, del, fetcher, formatCOP, initials, patchJSON, postJSON } from '@/lib/api'
 import type { Usuario } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import {
@@ -10,6 +10,7 @@ import {
   FloatingAddButton,
   PageHeader,
   SkeletonRows,
+  StatusBadge,
   buttonGold,
 } from '@/components/win/shared'
 
@@ -25,6 +26,34 @@ export default function UsuariosPage() {
   const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actioningId, setActioningId] = useState<number | null>(null)
+
+  async function ejecutarAccion(id: number, accion: () => Promise<unknown>) {
+    setActionError('')
+    setActioningId(id)
+    try {
+      await accion()
+      await mutate(`${BASE_URL}/usuarios`)
+    } catch {
+      setActionError('No se pudo actualizar el usuario. Inténtalo de nuevo.')
+    } finally {
+      setActioningId(null)
+    }
+  }
+
+  function suspenderUsuario(id: number) {
+    ejecutarAccion(id, () => patchJSON(`${BASE_URL}/usuarios/${id}/suspender`))
+  }
+
+  function activarUsuario(id: number) {
+    ejecutarAccion(id, () => patchJSON(`${BASE_URL}/usuarios/${id}/activar`))
+  }
+
+  function eliminarUsuario(id: number) {
+    if (!window.confirm('¿Eliminar este usuario?')) return
+    ejecutarAccion(id, () => del(`${BASE_URL}/usuarios/${id}`))
+  }
 
   function closeModal() {
     setOpen(false)
@@ -86,12 +115,18 @@ export default function UsuariosPage() {
         subtitle="Administración de apostadores y saldos"
       />
 
+      {actionError && (
+        <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+          {actionError}
+        </p>
+      )}
+
       <div className="overflow-hidden rounded-lg border border-[#2a3f55] bg-[#111827]">
         <div className="win-scroll overflow-x-auto">
           <table className="w-full min-w-[640px] text-left">
             <thead>
               <tr className="border-b border-[#2a3f55]">
-                {['Usuario', 'Correo', 'Saldo'].map((h) => (
+                {['Usuario', 'Correo', 'Saldo', 'Estado', 'Acciones'].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-2 text-xs font-bold uppercase text-[#f5a623]"
@@ -122,6 +157,40 @@ export default function UsuariosPage() {
                   </td>
                   <td className="px-4 py-3 text-sm font-bold text-white">
                     {formatCOP(u.saldo)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge estado={u.estado} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {u.estado === 'ACTIVO' && (
+                        <button
+                          onClick={() => suspenderUsuario(u.id)}
+                          disabled={actioningId === u.id}
+                          className="rounded border border-[#f5a623] px-3 py-1 text-xs font-bold text-[#f5a623] transition hover:bg-[#f5a623]/10 disabled:opacity-50"
+                        >
+                          Suspender
+                        </button>
+                      )}
+                      {u.estado === 'SUSPENDIDO' && (
+                        <button
+                          onClick={() => activarUsuario(u.id)}
+                          disabled={actioningId === u.id}
+                          className="rounded border border-emerald-500 px-3 py-1 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500/10 disabled:opacity-50"
+                        >
+                          Activar
+                        </button>
+                      )}
+                      {u.estado !== 'ELIMINADO' && (
+                        <button
+                          onClick={() => eliminarUsuario(u.id)}
+                          disabled={actioningId === u.id}
+                          className="rounded border border-red-500 px-3 py-1 text-xs font-bold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+                        >
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
