@@ -31,12 +31,27 @@ export default function UsuariosPage() {
     setError('')
   }
 
+  function esMayorDeEdad(fecha: string): boolean {
+    const nacimiento = new Date(fecha)
+    const hoy = new Date()
+    let edad = hoy.getFullYear() - nacimiento.getFullYear()
+    const noHaCumplidoAnosEsteAno =
+      hoy.getMonth() < nacimiento.getMonth() ||
+      (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate())
+    if (noHaCumplidoAnosEsteAno) edad--
+    return edad >= 18
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!nombreCompleto.trim() || !correo.trim() || !contrasena.trim() || !fechaNacimiento)
       return
-    setSaving(true)
     setError('')
+    if (!esMayorDeEdad(fechaNacimiento)) {
+      setError('Debes ser mayor de 18 años para registrarte')
+      return
+    }
+    setSaving(true)
     try {
       await postJSON(`${BASE_URL}/usuarios/registro`, {
         nombreCompleto,
