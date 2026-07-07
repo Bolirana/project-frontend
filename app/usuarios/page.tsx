@@ -24,12 +24,19 @@ export default function UsuariosPage() {
   const [contrasena, setContrasena] = useState('')
   const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function closeModal() {
+    setOpen(false)
+    setError('')
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!nombreCompleto.trim() || !correo.trim() || !contrasena.trim() || !fechaNacimiento)
       return
     setSaving(true)
+    setError('')
     try {
       await postJSON(`${BASE_URL}/usuarios/registro`, {
         nombreCompleto,
@@ -43,6 +50,15 @@ export default function UsuariosPage() {
       setCorreo('')
       setContrasena('')
       setFechaNacimiento('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : ''
+      if (message.includes('409')) {
+        setError('Este correo ya está registrado.')
+      } else if (message.includes('400')) {
+        setError('Revisa los datos ingresados: alguno no es válido.')
+      } else {
+        setError('No se pudo crear el usuario. Inténtalo de nuevo.')
+      }
     } finally {
       setSaving(false)
     }
@@ -109,7 +125,7 @@ export default function UsuariosPage() {
 
       <FloatingAddButton label="Nuevo Usuario" onClick={() => setOpen(true)} />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nuevo Usuario">
+      <Modal open={open} onClose={closeModal} title="Nuevo Usuario">
         <form onSubmit={submit}>
           <Field label="Nombre completo">
             <input
@@ -145,6 +161,11 @@ export default function UsuariosPage() {
               onChange={(e) => setFechaNacimiento(e.target.value)}
             />
           </Field>
+          {error && (
+            <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </p>
+          )}
           <button type="submit" disabled={saving} className={buttonGold('w-full')}>
             {saving ? 'Guardando...' : 'Crear Usuario'}
           </button>
