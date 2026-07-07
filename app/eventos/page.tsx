@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { BASE_URL, fetcher, goalsOdds, mensajeError, oddsFor, postJSON, splitTeams } from '@/lib/api'
+import { BASE_URL, fetcher, goalsOdds, mensajeError, oddsFor, patchJSON, postJSON, splitTeams } from '@/lib/api'
 import type { Evento } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import { OddsButton } from '@/components/win/odds-button'
@@ -44,6 +44,72 @@ export default function EventosPage() {
   const [opciones, setOpciones] = useState<OpcionForm[]>(OPCIONES_INICIALES)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const [accionError, setAccionError] = useState('')
+  const [accionandoId, setAccionandoId] = useState<number | null>(null)
+
+  const [liquidarEvento, setLiquidarEvento] = useState<Evento | null>(null)
+  const [opcionGanadoraId, setOpcionGanadoraId] = useState('')
+  const [liquidando, setLiquidando] = useState(false)
+  const [liquidarErrorMsg, setLiquidarErrorMsg] = useState('')
+
+  async function cambiarEstado(id: number, nuevoEstado: string) {
+    setAccionError('')
+    setAccionandoId(id)
+    try {
+      await patchJSON(`${BASE_URL}/eventos/${id}/estado?nuevoEstado=${nuevoEstado}`)
+      await mutate(`${BASE_URL}/eventos`)
+    } catch (err) {
+      setAccionError(mensajeError(err, 'actualizar el evento'))
+    } finally {
+      setAccionandoId(null)
+    }
+  }
+
+  function abrirEvento(id: number) {
+    cambiarEstado(id, 'ABIERTO')
+  }
+
+  function cerrarEvento(id: number) {
+    cambiarEstado(id, 'CERRADO')
+  }
+
+  function cancelarEvento(id: number) {
+    if (!window.confirm('¿Cancelar este evento? Esta acción no se puede deshacer.')) return
+    cambiarEstado(id, 'CANCELADO')
+  }
+
+  function abrirModalLiquidar(evento: Evento) {
+    setLiquidarEvento(evento)
+    setOpcionGanadoraId('')
+    setLiquidarErrorMsg('')
+  }
+
+  function cerrarModalLiquidar() {
+    setLiquidarEvento(null)
+    setOpcionGanadoraId('')
+    setLiquidarErrorMsg('')
+  }
+
+  async function confirmarLiquidacion(e: React.FormEvent) {
+    e.preventDefault()
+    if (!liquidarEvento || !opcionGanadoraId) return
+    setLiquidando(true)
+    setLiquidarErrorMsg('')
+    try {
+      await postJSON(`${BASE_URL}/apuestas/liquidar`, {
+        eventoId: liquidarEvento.id,
+        opcionGanadoraId: Number(opcionGanadoraId),
+      })
+      await mutate(`${BASE_URL}/eventos`)
+      await mutate(`${BASE_URL}/apuestas`)
+      cerrarModalLiquidar()
+    } catch (err) {
+      setLiquidarErrorMsg(mensajeError(err, 'liquidar el evento'))
+    } finally {
+      setLiquidando(false)
+    }
+  }
 
   function updateOpcion(index: number, campo: keyof OpcionForm, valor: string) {
     setOpciones((prev) =>
@@ -115,6 +181,12 @@ export default function EventosPage() {
         subtitle="Partidos de fútbol disponibles para apostar"
       />
 
+      {accionError && (
+        <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+          {accionError}
+        </p>
+      )}
+
       {isLoading && <SkeletonRows rows={6} />}
       {!isLoading && data?.length === 0 && <EmptyState />}
 
@@ -123,6 +195,7 @@ export default function EventosPage() {
           const [home, away] = splitTeams(evento.nombre)
           const odds = oddsFor(evento.id)
           const goals = goalsOdds(evento.id)
+          const enAccion = accionandoId === evento.id
           return (
             <div
               key={evento.id}
@@ -148,6 +221,52 @@ export default function EventosPage() {
               <div className="flex gap-1">
                 <OddsButton label="Más 2.5" value={goals.mas} />
                 <OddsButton label="Men 2.5" value={goals.menos} />
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {evento.estado === 'CREADO' && (
+                  <>
+                    <button
+                      onClick={() => abrirEvento(evento.id)}
+                      disabled={enAccion}
+                      className="rounded border border-emerald-500 px-3 py-1 text-xs font-bold text-emerald-400 transition hover:bg-emerald-500/10 disabled:opacity-50"
+                    >
+                      Abrir
+                    </button>
+                    <button
+                      onClick={() => cancelarEvento(evento.id)}
+                      disabled={enAccion}
+                      className="rounded border border-red-500 px-3 py-1 text-xs font-bold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                )}
+                {evento.estado === 'ABIERTO' && (
+                  <>
+                    <button
+                      onClick={() => cerrarEvento(evento.id)}
+                      disabled={enAccion}
+                      className="rounded border border-[#f5a623] px-3 py-1 text-xs font-bold text-[#f5a623] transition hover:bg-[#f5a623]/10 disabled:opacity-50"
+                    >
+                      Cerrar
+                    </button>
+                    <button
+                      onClick={() => cancelarEvento(evento.id)}
+                      disabled={enAccion}
+                      className="rounded border border-red-500 px-3 py-1 text-xs font-bold text-red-400 transition hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                )}
+                {evento.estado === 'CERRADO' && (
+                  <button
+                    onClick={() => abrirModalLiquidar(evento)}
+                    className={buttonGold('px-3 py-1 text-xs')}
+                  >
+                    Liquidar
+                  </button>
+                )}
               </div>
             </div>
           )
@@ -252,6 +371,45 @@ export default function EventosPage() {
             className={buttonGold('w-full')}
           >
             {saving ? 'Guardando...' : 'Crear Evento'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        open={liquidarEvento !== null}
+        onClose={cerrarModalLiquidar}
+        title={`Liquidar evento: ${liquidarEvento?.nombre ?? ''}`}
+      >
+        <form onSubmit={confirmarLiquidacion}>
+          <Field label="Opción ganadora">
+            <select
+              className={inputClass}
+              value={opcionGanadoraId}
+              onChange={(e) => setOpcionGanadoraId(e.target.value)}
+            >
+              <option value="">Selecciona la opción ganadora</option>
+              {liquidarEvento?.mercados?.map((m) => (
+                <optgroup key={m.id} label={m.nombre}>
+                  {m.opciones?.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.nombre}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </Field>
+          {liquidarErrorMsg && (
+            <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {liquidarErrorMsg}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={liquidando || !opcionGanadoraId}
+            className={buttonGold('w-full')}
+          >
+            {liquidando ? 'Liquidando...' : 'Liquidar'}
           </button>
         </form>
       </Modal>

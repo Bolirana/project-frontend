@@ -28,14 +28,18 @@ async function mensajeDelBackend(res: Response): Promise<string | undefined> {
 }
 
 // Traduce un error de una llamada a la API a un mensaje de UI. `accion` describe
-// la operación en curso (ej. "registrar la apuesta") para armar el mensaje 400 genérico.
+// la operación en curso (ej. "registrar la apuesta") para armar el mensaje genérico
+// cuando el backend no trajo un mensaje propio.
 export function mensajeError(err: unknown, accion: string): string {
   if (err instanceof ApiError) {
-    if (err.status === 400) {
-      return err.backendMessage || `No se pudo ${accion}. Verifica los datos.`
-    }
     if (err.status === 500) {
       return 'Error del servidor. Intenta de nuevo.'
+    }
+    if (err.backendMessage) {
+      return err.backendMessage
+    }
+    if (err.status === 400) {
+      return `No se pudo ${accion}. Verifica los datos.`
     }
   }
   return `No se pudo ${accion}.`
@@ -59,13 +63,13 @@ export async function postJSON<T>(url: string, body: unknown): Promise<T> {
 
 export async function patchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, { method: 'PATCH' })
-  if (!res.ok) throw new Error(`Error ${res.status}`)
+  if (!res.ok) throw new ApiError(res.status, await mensajeDelBackend(res))
   return res.json() as Promise<T>
 }
 
 export async function del<T>(url: string): Promise<T> {
   const res = await fetch(url, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`Error ${res.status}`)
+  if (!res.ok) throw new ApiError(res.status, await mensajeDelBackend(res))
   return res.json() as Promise<T>
 }
 
