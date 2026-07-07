@@ -6,12 +6,17 @@ export type Evento = {
   fechaEvento?: string
   equipoLocal?: string
   equipoVisitante?: string
+  mercados?: Mercado[]
 }
 
 export type Mercado = {
   id: number
   nombre: string
-  evento: Evento
+  // Presente y completo cuando se obtiene vía GET /api/mercados; en la forma
+  // anidada evento.mercados[] el backend lo colapsa a solo su id para evitar
+  // referencias circulares, así que no debe asumirse siempre poblado.
+  evento?: Evento
+  opciones?: OpcionApuesta[]
 }
 
 export type Usuario = {
@@ -25,7 +30,9 @@ export type OpcionApuesta = {
   id: number
   nombre: string
   cuotaActual: number
-  mercado: Mercado
+  // Mismo caso que Mercado.evento: completo solo cuando esta opción es el
+  // punto de entrada del árbol serializado (ej. Apuesta.opcion.mercado).
+  mercado?: Mercado
 }
 
 export type Apuesta = {

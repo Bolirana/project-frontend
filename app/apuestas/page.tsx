@@ -27,33 +27,43 @@ export default function ApuestasPage() {
     fetcher,
   )
   const { data: usuarios } = useSWR<Usuario[]>(`${BASE_URL}/usuarios`, fetcher)
+  const { data: eventos } = useSWR<Evento[]>(`${BASE_URL}/eventos`, fetcher)
 
   const [open, setOpen] = useState(false)
-  const [partido, setPartido] = useState('')
-  const [seleccion, setSeleccion] = useState('')
-  const [cuota, setCuota] = useState('1.50')
-  const [monto, setMonto] = useState('')
   const [usuarioId, setUsuarioId] = useState('')
+  const [eventoId, setEventoId] = useState('')
+  const [mercadoId, setMercadoId] = useState('')
+  const [opcionId, setOpcionId] = useState('')
+  const [monto, setMonto] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const eventosAbiertos = eventos?.filter((e) => e.estado === 'ABIERTO') ?? []
+  const mercados =
+    eventosAbiertos.find((e) => String(e.id) === eventoId)?.mercados ?? []
+  const opciones =
+    mercados.find((m) => String(m.id) === mercadoId)?.opciones ?? []
+
+  function resetForm() {
+    setUsuarioId('')
+    setEventoId('')
+    setMercadoId('')
+    setOpcionId('')
+    setMonto('')
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (!usuarioId || !opcionId || !monto) return
     setSaving(true)
     try {
       await postJSON(`${BASE_URL}/apuestas`, {
-        partido,
-        seleccion,
-        cuota: Number(cuota),
+        apostador: { id: Number(usuarioId) },
+        opcion: { id: Number(opcionId) },
         monto: Number(monto),
-        usuarioId: usuarioId ? Number(usuarioId) : undefined,
-        estado: 'REGISTRADA',
       })
       await mutate(`${BASE_URL}/apuestas`)
       setOpen(false)
-      setPartido('')
-      setSeleccion('')
-      setCuota('1.50')
-      setMonto('')
+      resetForm()
     } finally {
       setSaving(false)
     }
@@ -123,24 +133,15 @@ export default function ApuestasPage() {
 
       <FloatingAddButton label="Nueva Apuesta" onClick={() => setOpen(true)} />
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nueva Apuesta">
+      <Modal
+        open={open}
+        onClose={() => {
+          setOpen(false)
+          resetForm()
+        }}
+        title="Nueva Apuesta"
+      >
         <form onSubmit={submit}>
-          <Field label="Partido">
-            <input
-              className={inputClass}
-              placeholder="Ej: Colombia vs Brasil"
-              value={partido}
-              onChange={(e) => setPartido(e.target.value)}
-            />
-          </Field>
-          <Field label="Selección">
-            <input
-              className={inputClass}
-              placeholder="Ej: Colombia (1)"
-              value={seleccion}
-              onChange={(e) => setSeleccion(e.target.value)}
-            />
-          </Field>
           <Field label="Apostador">
             <select
               className={inputClass}
@@ -155,27 +156,71 @@ export default function ApuestasPage() {
               ))}
             </select>
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Cuota">
-              <input
-                type="number"
-                step="0.01"
-                className={inputClass}
-                value={cuota}
-                onChange={(e) => setCuota(e.target.value)}
-              />
-            </Field>
-            <Field label="Monto (COP)">
-              <input
-                type="number"
-                className={inputClass}
-                placeholder="50000"
-                value={monto}
-                onChange={(e) => setMonto(e.target.value)}
-              />
-            </Field>
-          </div>
-          <button type="submit" disabled={saving} className={buttonGold('w-full')}>
+          <Field label="Evento (ABIERTO)">
+            <select
+              className={inputClass}
+              value={eventoId}
+              onChange={(e) => {
+                setEventoId(e.target.value)
+                setMercadoId('')
+                setOpcionId('')
+              }}
+            >
+              <option value="">Selecciona un evento</option>
+              {eventosAbiertos.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {nombreEvento(ev)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Mercado">
+            <select
+              className={inputClass}
+              value={mercadoId}
+              disabled={!eventoId}
+              onChange={(e) => {
+                setMercadoId(e.target.value)
+                setOpcionId('')
+              }}
+            >
+              <option value="">Selecciona un mercado</option>
+              {mercados.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Opción">
+            <select
+              className={inputClass}
+              value={opcionId}
+              disabled={!mercadoId}
+              onChange={(e) => setOpcionId(e.target.value)}
+            >
+              <option value="">Selecciona una opción</option>
+              {opciones.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.nombre} (cuota {o.cuotaActual.toFixed(2)})
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Monto (COP)">
+            <input
+              type="number"
+              className={inputClass}
+              placeholder="50000"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+            />
+          </Field>
+          <button
+            type="submit"
+            disabled={saving || !usuarioId || !opcionId || !monto}
+            className={buttonGold('w-full')}
+          >
             {saving ? 'Guardando...' : 'Crear Apuesta'}
           </button>
         </form>

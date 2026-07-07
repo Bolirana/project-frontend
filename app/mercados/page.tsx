@@ -66,13 +66,13 @@ export default function MercadosPage() {
               <h3 className="text-sm font-bold text-white text-balance">
                 {m.nombre}
               </h3>
-              <StatusBadge estado={m.evento.estado} />
+              <StatusBadge estado={m.evento?.estado ?? ''} />
             </div>
             <div className="mt-1 border-t border-[#2a3f55] pt-2">
               <p className="text-[11px] font-bold uppercase text-[#f5a623]">
                 Evento
               </p>
-              <p className="text-sm text-white">{m.evento.nombre}</p>
+              <p className="text-sm text-white">{m.evento?.nombre ?? '—'}</p>
             </div>
           </div>
         ))}
