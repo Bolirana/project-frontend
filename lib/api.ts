@@ -91,14 +91,3 @@ export function initials(name: string): string {
     .map((p) => p[0]?.toUpperCase())
     .join('')
 }
-
-// Deterministic pseudo-random odds per event id so they are stable between renders.
-export function oddsFor(id: number): { uno: string; x: string; dos: string } {
-  const base = (n: number) => (1.3 + ((id * n) % 25) / 10).toFixed(2)
-  return { uno: base(7), x: base(13), dos: base(19) }
-}
-
-export function goalsOdds(id: number): { mas: string; menos: string } {
-  const base = (n: number) => (1.5 + ((id * n) % 18) / 10).toFixed(2)
-  return { mas: base(5), menos: base(11) }
-}
