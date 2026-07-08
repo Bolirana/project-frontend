@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
 import { BASE_URL, fetcher, goalsOdds, mensajeError, oddsFor, patchJSON, postJSON, splitTeams } from '@/lib/api'
-import type { Evento } from '@/lib/types'
+import type { Evento, EventoExternoSportsDb, EventoOdds, OutcomeOdds } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import { OddsButton } from '@/components/win/odds-button'
 import {
@@ -34,16 +34,65 @@ const OPCIONES_INICIALES: OpcionForm[] = [
   { nombre: 'Visitante', cuotaActual: '' },
 ]
 
+function normalizar(s: string) {
+  return s.trim().toLowerCase()
+}
+
+// RF-04: mercado h2h del primer bookmaker devuelto, usado solo como guía.
+function outcomesDe(evento: EventoOdds | null): OutcomeOdds[] {
+  if (!evento?.bookmakers?.length) return []
+  const bm = evento.bookmakers[0]
+  const market = bm.markets?.find((m) => m.key === 'h2h') ?? bm.markets?.[0]
+  return market?.outcomes ?? []
+}
+
+// Empareja el nombre de una opción del formulario (ej. "Local", "Empate",
+// o el nombre real de un equipo) contra las cuotas de referencia externas.
+function sugerenciaPara(
+  nombreOpcion: string,
+  equipoLocal: string,
+  equipoVisitante: string,
+  outcomes: OutcomeOdds[],
+): number | null {
+  if (!outcomes.length) return null
+  const n = normalizar(nombreOpcion)
+  let objetivo: string | null = null
+  if (n === normalizar(equipoLocal) || n === 'local' || n === '1') objetivo = equipoLocal
+  else if (n === normalizar(equipoVisitante) || n === 'visitante' || n === '2')
+    objetivo = equipoVisitante
+  else if (n === 'empate' || n === 'draw' || n === 'x') objetivo = 'draw'
+
+  if (!objetivo) return null
+  const match = outcomes.find(
+    (o) => normalizar(o.name) === normalizar(objetivo!) || normalizar(o.name) === 'draw' && objetivo === 'draw',
+  )
+  return match ? match.price : null
+}
+
 export default function EventosPage() {
   const { data, isLoading } = useSWR<Evento[]>(`${BASE_URL}/eventos`, fetcher)
   const [open, setOpen] = useState(false)
   const [equipoLocal, setEquipoLocal] = useState('')
   const [equipoVisitante, setEquipoVisitante] = useState('')
+  const [deporte, setDeporte] = useState('Fútbol')
   const [fechaEvento, setFechaEvento] = useState('')
   const [mercadoNombre, setMercadoNombre] = useState('Resultado Final')
   const [opciones, setOpciones] = useState<OpcionForm[]>(OPCIONES_INICIALES)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // RF-04: búsqueda de equipo en TheSportsDB para autocompletar el formulario.
+  const [idEquipoBusqueda, setIdEquipoBusqueda] = useState('')
+  const [buscandoEquipo, setBuscandoEquipo] = useState(false)
+  const [errorEquipo, setErrorEquipo] = useState('')
+  const [eventosExternos, setEventosExternos] = useState<EventoExternoSportsDb[] | null>(null)
+
+  // RF-04: cuotas de referencia de The Odds API, solo como guía visual.
+  const [sportKey, setSportKey] = useState('soccer_epl')
+  const [buscandoOdds, setBuscandoOdds] = useState(false)
+  const [errorOdds, setErrorOdds] = useState('')
+  const [oddsResultados, setOddsResultados] = useState<EventoOdds[] | null>(null)
+  const [oddsSeleccionadoId, setOddsSeleccionadoId] = useState('')
 
   const [accionError, setAccionError] = useState('')
   const [accionandoId, setAccionandoId] = useState<number | null>(null)
@@ -128,10 +177,65 @@ export default function EventosPage() {
   function resetForm() {
     setEquipoLocal('')
     setEquipoVisitante('')
+    setDeporte('Fútbol')
     setFechaEvento('')
     setMercadoNombre('Resultado Final')
     setOpciones(OPCIONES_INICIALES)
+    setIdEquipoBusqueda('')
+    setErrorEquipo('')
+    setEventosExternos(null)
+    setOddsResultados(null)
+    setOddsSeleccionadoId('')
+    setErrorOdds('')
   }
+
+  async function buscarEquipo() {
+    if (!idEquipoBusqueda.trim()) return
+    setBuscandoEquipo(true)
+    setErrorEquipo('')
+    setEventosExternos(null)
+    try {
+      const data = await fetcher<{ events: EventoExternoSportsDb[] | null }>(
+        `${BASE_URL}/integracion-deportiva/sportsdb/equipos/${idEquipoBusqueda.trim()}/proximos-eventos`,
+      )
+      setEventosExternos(data.events ?? [])
+    } catch (err) {
+      setErrorEquipo(mensajeError(err, 'buscar los eventos del equipo'))
+    } finally {
+      setBuscandoEquipo(false)
+    }
+  }
+
+  function seleccionarEventoExterno(ev: EventoExternoSportsDb) {
+    setEquipoLocal(ev.strHomeTeam ?? '')
+    setEquipoVisitante(ev.strAwayTeam ?? '')
+    if (ev.strSport) setDeporte(ev.strSport)
+    if (ev.dateEvent) setFechaEvento(ev.dateEvent)
+  }
+
+  async function buscarOdds() {
+    if (!sportKey.trim()) return
+    setBuscandoOdds(true)
+    setErrorOdds('')
+    setOddsResultados(null)
+    setOddsSeleccionadoId('')
+    try {
+      const data = await fetcher<EventoOdds[]>(`${BASE_URL}/integracion-deportiva/odds/${sportKey.trim()}`)
+      setOddsResultados(data ?? [])
+    } catch (err) {
+      setErrorOdds(mensajeError(err, 'consultar las cuotas de referencia'))
+    } finally {
+      setBuscandoOdds(false)
+    }
+  }
+
+  const eventoOddsCoincidente =
+    oddsResultados?.find(
+      (o) => normalizar(o.home_team) === normalizar(equipoLocal) && normalizar(o.away_team) === normalizar(equipoVisitante),
+    ) ?? null
+  const eventoOddsActivo =
+    eventoOddsCoincidente ?? oddsResultados?.find((o) => o.id === oddsSeleccionadoId) ?? null
+  const outcomesReferencia = outcomesDe(eventoOddsActivo)
 
   const opcionesValidas = opciones.filter(
     (o) => o.nombre.trim() && Number(o.cuotaActual) > 1.0,
@@ -139,6 +243,7 @@ export default function EventosPage() {
   const formValido =
     equipoLocal.trim() &&
     equipoVisitante.trim() &&
+    deporte.trim() &&
     fechaEvento &&
     mercadoNombre.trim() &&
     opcionesValidas.length > 0
@@ -152,7 +257,7 @@ export default function EventosPage() {
       await postJSON(`${BASE_URL}/eventos`, {
         equipoLocal,
         equipoVisitante,
-        deporte: 'Fútbol',
+        deporte,
         fechaEvento,
         mercados: [
           {
@@ -284,6 +389,105 @@ export default function EventosPage() {
         title="Nuevo Evento"
       >
         <form onSubmit={submit}>
+          <div className="mb-4 space-y-3 rounded-md border border-[#2a3f55] bg-[#0d1117] p-3">
+            <p className="text-xs font-bold uppercase text-[#00bfff]">
+              RF-04 · Datos externos (opcional)
+            </p>
+
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Field label="ID de equipo (TheSportsDB)">
+                  <input
+                    className={inputClass}
+                    placeholder="Ej: 133604"
+                    value={idEquipoBusqueda}
+                    onChange={(e) => setIdEquipoBusqueda(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <button
+                type="button"
+                onClick={buscarEquipo}
+                disabled={buscandoEquipo || !idEquipoBusqueda.trim()}
+                className="mb-4 shrink-0 rounded border border-[#2a3f55] px-3 py-2 text-xs font-bold uppercase text-white transition hover:border-[#00bfff] hover:text-[#00bfff] disabled:opacity-50"
+              >
+                {buscandoEquipo ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+            {errorEquipo && <p className="text-xs text-red-400">{errorEquipo}</p>}
+            {eventosExternos && eventosExternos.length === 0 && (
+              <p className="text-xs text-[#8b9ab0]">Sin próximos eventos para ese equipo.</p>
+            )}
+            {eventosExternos && eventosExternos.length > 0 && (
+              <Field label="Próximos eventos encontrados">
+                <select
+                  className={inputClass}
+                  defaultValue=""
+                  onChange={(e) => {
+                    const ev = eventosExternos.find((x) => x.idEvent === e.target.value)
+                    if (ev) seleccionarEventoExterno(ev)
+                  }}
+                >
+                  <option value="" disabled>
+                    Selecciona un evento para autocompletar
+                  </option>
+                  {eventosExternos.map((ev) => (
+                    <option key={ev.idEvent} value={ev.idEvent}>
+                      {ev.strEvent} — {ev.dateEvent}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Field label="Sport key (The Odds API)">
+                  <input
+                    className={inputClass}
+                    placeholder="Ej: soccer_epl"
+                    value={sportKey}
+                    onChange={(e) => setSportKey(e.target.value)}
+                  />
+                </Field>
+              </div>
+              <button
+                type="button"
+                onClick={buscarOdds}
+                disabled={buscandoOdds || !sportKey.trim()}
+                className="mb-4 shrink-0 rounded border border-[#2a3f55] px-3 py-2 text-xs font-bold uppercase text-white transition hover:border-[#00bfff] hover:text-[#00bfff] disabled:opacity-50"
+              >
+                {buscandoOdds ? 'Buscando...' : 'Ver cuotas'}
+              </button>
+            </div>
+            {errorOdds && <p className="text-xs text-red-400">{errorOdds}</p>}
+            {oddsResultados && oddsResultados.length === 0 && (
+              <p className="text-xs text-[#8b9ab0]">Sin cuotas de referencia para ese sport key.</p>
+            )}
+            {oddsResultados && oddsResultados.length > 0 && !eventoOddsCoincidente && (
+              <Field label="Evento de referencia (sin match automático por nombre de equipo)">
+                <select
+                  className={inputClass}
+                  value={oddsSeleccionadoId}
+                  onChange={(e) => setOddsSeleccionadoId(e.target.value)}
+                >
+                  <option value="">Ninguno</option>
+                  {oddsResultados.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.home_team} vs {o.away_team}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            {eventoOddsActivo && (
+              <p className="text-xs text-[#8b9ab0]">
+                Cuotas de referencia cargadas para {eventoOddsActivo.home_team} vs{' '}
+                {eventoOddsActivo.away_team}. Se muestran como sugerencia junto a cada opción.
+              </p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Equipo local">
               <input
@@ -302,14 +506,24 @@ export default function EventosPage() {
               />
             </Field>
           </div>
-          <Field label="Fecha del evento">
-            <input
-              type="date"
-              className={inputClass}
-              value={fechaEvento}
-              onChange={(e) => setFechaEvento(e.target.value)}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Deporte">
+              <input
+                className={inputClass}
+                placeholder="Ej: Fútbol"
+                value={deporte}
+                onChange={(e) => setDeporte(e.target.value)}
+              />
+            </Field>
+            <Field label="Fecha del evento">
+              <input
+                type="date"
+                className={inputClass}
+                value={fechaEvento}
+                onChange={(e) => setFechaEvento(e.target.value)}
+              />
+            </Field>
+          </div>
           <Field label="Nombre del mercado">
             <input
               className={inputClass}
@@ -322,36 +536,49 @@ export default function EventosPage() {
             <p className="text-xs font-bold uppercase text-[#f5a623]">
               Opciones de apuesta
             </p>
-            {opciones.map((o, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  className={inputClass}
-                  placeholder="Ej: Local"
-                  value={o.nombre}
-                  onChange={(e) => updateOpcion(i, 'nombre', e.target.value)}
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  min="1.01"
-                  className={inputClass}
-                  placeholder="Cuota"
-                  value={o.cuotaActual}
-                  onChange={(e) =>
-                    updateOpcion(i, 'cuotaActual', e.target.value)
-                  }
-                />
-                {opciones.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeOpcion(i)}
-                    className="shrink-0 px-2 text-xs text-[#8b9ab0] hover:text-white"
-                  >
-                    Quitar
-                  </button>
-                )}
-              </div>
-            ))}
+            {opciones.map((o, i) => {
+              const sugerida = sugerenciaPara(o.nombre, equipoLocal, equipoVisitante, outcomesReferencia)
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    className={inputClass}
+                    placeholder="Ej: Local"
+                    value={o.nombre}
+                    onChange={(e) => updateOpcion(i, 'nombre', e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1.01"
+                    className={inputClass}
+                    placeholder="Cuota"
+                    value={o.cuotaActual}
+                    onChange={(e) =>
+                      updateOpcion(i, 'cuotaActual', e.target.value)
+                    }
+                  />
+                  {sugerida != null && (
+                    <button
+                      type="button"
+                      title="Usar cuota de referencia"
+                      onClick={() => updateOpcion(i, 'cuotaActual', sugerida.toFixed(2))}
+                      className="shrink-0 rounded border border-[#00bfff]/40 px-2 py-1 text-[11px] font-semibold text-[#00bfff] transition hover:bg-[#00bfff]/10"
+                    >
+                      Ref: {sugerida.toFixed(2)}
+                    </button>
+                  )}
+                  {opciones.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeOpcion(i)}
+                      className="shrink-0 px-2 text-xs text-[#8b9ab0] hover:text-white"
+                    >
+                      Quitar
+                    </button>
+                  )}
+                </div>
+              )
+            })}
             <button
               type="button"
               onClick={addOpcion}

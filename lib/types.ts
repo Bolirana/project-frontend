@@ -91,3 +91,34 @@ export type HistorialApostador = {
   apuestas: Apuesta[]
   movimientos: MovimientoSaldo[]
 }
+
+// RF-04: Evento externo de TheSportsDB, vía
+// GET /api/integracion-deportiva/sportsdb/equipos/{id}/proximos-eventos
+// Los campos usan los nombres originales de TheSportsDB (idEvent, strHomeTeam...)
+// porque los DTO del backend anotan @JsonProperty con esos nombres para poder
+// deserializar la respuesta externa, y esa misma anotación se aplica también
+// al serializar la respuesta hacia este frontend.
+export type EventoExternoSportsDb = {
+  idEvent: string
+  strEvent: string
+  strHomeTeam: string
+  strAwayTeam: string
+  strSport: string
+  dateEvent: string
+  strTime?: string
+}
+
+// RF-04: Cuotas de referencia de The Odds API, vía
+// GET /api/integracion-deportiva/odds/{sportKey}. Mismo caso: nombres de
+// campo originales de la API externa (home_team, sport_key...).
+export type OutcomeOdds = { name: string; price: number }
+export type MarketOdds = { key: string; outcomes: OutcomeOdds[] }
+export type BookmakerOdds = { key: string; title: string; markets: MarketOdds[] }
+export type EventoOdds = {
+  id: string
+  sport_key: string
+  home_team: string
+  away_team: string
+  commence_time: string
+  bookmakers: BookmakerOdds[]
+}
