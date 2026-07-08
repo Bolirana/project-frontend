@@ -85,9 +85,12 @@ export function TopNavbar() {
                 >
                   Entrar
                 </Link>
-                <button className="rounded bg-[#f5a623] px-3 py-1 text-xs font-bold uppercase text-black transition hover:brightness-110">
+                <Link
+                  href="/login?modo=registro"
+                  className="rounded bg-[#f5a623] px-3 py-1 text-xs font-bold uppercase text-black transition hover:brightness-110"
+                >
                   Registrarse
-                </button>
+                </Link>
               </>
             )}
           </div>
