@@ -46,6 +46,9 @@ function LoginRegistroForm() {
 
   function iniciarSesionYRedirigir(usuario: Usuario) {
     localStorage.setItem('usuario', JSON.stringify(usuario))
+    // Leída por middleware.ts (corre en el servidor, no tiene acceso a localStorage)
+    // para decidir si una ruta administrativa es accesible.
+    document.cookie = `rol=${usuario.rol}; path=/; max-age=${60 * 60 * 24 * 7}`
     router.push('/')
   }
 

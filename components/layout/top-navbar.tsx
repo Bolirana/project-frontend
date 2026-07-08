@@ -44,6 +44,9 @@ export function TopNavbar() {
 
   function cerrarSesion() {
     localStorage.removeItem('usuario')
+    // Sin esto, la cookie "rol" seguiría viva y middleware.ts dejaría entrar
+    // a rutas de administrador aunque la UI ya muestre la sesión cerrada.
+    document.cookie = 'rol=; path=/; max-age=0'
     setUsuario(null)
     router.push('/login')
   }
