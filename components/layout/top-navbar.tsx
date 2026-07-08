@@ -2,8 +2,10 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
+import type { Usuario } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const UTILITY_LINKS = [
@@ -20,6 +22,31 @@ const MAIN_TABS = [
 
 export function TopNavbar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [usuario, setUsuario] = useState<Usuario | null>(null)
+
+  // Se re-lee en cada cambio de ruta porque el layout (y este componente) no se
+  // remonta entre navegaciones client-side: sin esto, iniciar sesión en /login
+  // y ser redirigido a / no actualizaría el navbar hasta un refresh completo.
+  useEffect(() => {
+    const guardado = localStorage.getItem('usuario')
+    if (!guardado) {
+      setUsuario(null)
+      return
+    }
+    try {
+      setUsuario(JSON.parse(guardado))
+    } catch {
+      localStorage.removeItem('usuario')
+      setUsuario(null)
+    }
+  }, [pathname])
+
+  function cerrarSesion() {
+    localStorage.removeItem('usuario')
+    setUsuario(null)
+    router.push('/login')
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full">
@@ -38,15 +65,31 @@ export function TopNavbar() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded border border-[#2a3f55] px-3 py-1 text-xs font-bold uppercase text-white transition hover:border-[#f5a623] hover:text-[#f5a623]"
-            >
-              Entrar
-            </Link>
-            <button className="rounded bg-[#f5a623] px-3 py-1 text-xs font-bold uppercase text-black transition hover:brightness-110">
-              Registrarse
-            </button>
+            {usuario ? (
+              <>
+                <span className="text-xs font-bold uppercase text-white">
+                  {usuario.nombreCompleto}
+                </span>
+                <button
+                  onClick={cerrarSesion}
+                  className="rounded border border-[#2a3f55] px-3 py-1 text-xs font-bold uppercase text-white transition hover:border-[#f5a623] hover:text-[#f5a623]"
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded border border-[#2a3f55] px-3 py-1 text-xs font-bold uppercase text-white transition hover:border-[#f5a623] hover:text-[#f5a623]"
+                >
+                  Entrar
+                </Link>
+                <button className="rounded bg-[#f5a623] px-3 py-1 text-xs font-bold uppercase text-black transition hover:brightness-110">
+                  Registrarse
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
