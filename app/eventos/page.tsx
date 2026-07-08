@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { BASE_URL, fetcher, goalsOdds, mensajeError, oddsFor, patchJSON, postJSON, splitTeams } from '@/lib/api'
+import { BASE_URL, fetcher, mensajeError, patchJSON, postJSON, splitTeams } from '@/lib/api'
 import type { Evento, EventoExternoSportsDb, EventoOdds, OutcomeOdds } from '@/lib/types'
 import { Modal, Field, inputClass } from '@/components/win/modal'
 import { OddsButton } from '@/components/win/odds-button'
@@ -36,6 +36,27 @@ const OPCIONES_INICIALES: OpcionForm[] = [
 
 function normalizar(s: string) {
   return s.trim().toLowerCase()
+}
+
+// Cuotas reales del primer mercado del evento (no hay dato real para más
+// mercados: el form de creación solo permite definir uno). Empareja por
+// nombre de opción y cae a posición (1ra=local, 2da=visitante) si el admin
+// usó nombres distintos a "Local"/"Visitante"/"Empate".
+function cuotas1X2(evento: Evento): { uno: string; x: string | null; dos: string } {
+  const opciones = evento.mercados?.[0]?.opciones ?? []
+  if (opciones.length === 0) return { uno: '—', x: null, dos: '—' }
+
+  const porNombre = (nombre: string) => opciones.find((o) => normalizar(o.nombre) === nombre)
+
+  const local = porNombre('local') ?? opciones[0]
+  const visitante = porNombre('visitante') ?? opciones[1]
+  const empate = porNombre('empate')
+
+  return {
+    uno: local ? local.cuotaActual.toFixed(2) : '—',
+    x: empate ? empate.cuotaActual.toFixed(2) : null,
+    dos: visitante ? visitante.cuotaActual.toFixed(2) : '—',
+  }
 }
 
 // RF-04: mercado h2h del primer bookmaker devuelto, usado solo como guía.
@@ -298,8 +319,7 @@ export default function EventosPage() {
       <div className="space-y-2">
         {data?.map((evento) => {
           const [home, away] = splitTeams(evento.nombre)
-          const odds = oddsFor(evento.id)
-          const goals = goalsOdds(evento.id)
+          const odds = cuotas1X2(evento)
           const enAccion = accionandoId === evento.id
           return (
             <div
@@ -320,12 +340,8 @@ export default function EventosPage() {
               </div>
               <div className="flex gap-1">
                 <OddsButton label="1" value={odds.uno} />
-                <OddsButton label="X" value={odds.x} />
+                {odds.x && <OddsButton label="X" value={odds.x} />}
                 <OddsButton label="2" value={odds.dos} />
-              </div>
-              <div className="flex gap-1">
-                <OddsButton label="Más 2.5" value={goals.mas} />
-                <OddsButton label="Men 2.5" value={goals.menos} />
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {evento.estado === 'CREADO' && (
