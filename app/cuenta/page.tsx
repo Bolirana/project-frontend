@@ -115,6 +115,72 @@ export default function CuentaPage() {
     }
   }
 
+  const [openDepositar, setOpenDepositar] = useState(false)
+  const [montoDeposito, setMontoDeposito] = useState('')
+  const [metodoPagoDeposito, setMetodoPagoDeposito] = useState('NEQUI')
+  const [savingDeposito, setSavingDeposito] = useState(false)
+  const [errorDeposito, setErrorDeposito] = useState('')
+
+  function cerrarModalDepositar() {
+    setOpenDepositar(false)
+    setMontoDeposito('')
+    setMetodoPagoDeposito('NEQUI')
+    setErrorDeposito('')
+  }
+
+  async function submitDepositar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!usuarioId || !montoDeposito) return
+    setSavingDeposito(true)
+    setErrorDeposito('')
+    try {
+      await postJSON(`${BASE_URL}/movimientos/recargar`, {
+        usuarioId,
+        monto: Number(montoDeposito),
+        metodoPago: metodoPagoDeposito,
+      })
+      await mutate(key)
+      cerrarModalDepositar()
+    } catch (err) {
+      setErrorDeposito(mensajeError(err, 'registrar el depósito'))
+    } finally {
+      setSavingDeposito(false)
+    }
+  }
+
+  const [openRetirar, setOpenRetirar] = useState(false)
+  const [montoRetiro, setMontoRetiro] = useState('')
+  const [cuentaDestino, setCuentaDestino] = useState('')
+  const [savingRetiro, setSavingRetiro] = useState(false)
+  const [errorRetiro, setErrorRetiro] = useState('')
+
+  function cerrarModalRetirar() {
+    setOpenRetirar(false)
+    setMontoRetiro('')
+    setCuentaDestino('')
+    setErrorRetiro('')
+  }
+
+  async function submitRetirar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!usuarioId || !montoRetiro || !cuentaDestino.trim()) return
+    setSavingRetiro(true)
+    setErrorRetiro('')
+    try {
+      await postJSON(`${BASE_URL}/movimientos/retirar`, {
+        usuarioId,
+        monto: Number(montoRetiro),
+        metodoPago: 'NEQUI',
+      })
+      await mutate(key)
+      cerrarModalRetirar()
+    } catch (err) {
+      setErrorRetiro(mensajeError(err, 'registrar el retiro'))
+    } finally {
+      setSavingRetiro(false)
+    }
+  }
+
   return (
     <div className="p-4">
       <PageHeader title="Mi Cuenta" subtitle="Tu saldo, apuestas y movimientos" />
@@ -123,13 +189,29 @@ export default function CuentaPage() {
 
       {data && (
         <>
-          <div className="mb-6 rounded-lg border border-[#2a3f55] bg-[#1e2d3d] p-5">
-            <p className="text-xs font-bold uppercase text-[#8b9ab0]">
-              Saldo disponible
-            </p>
-            <p className="mt-1 text-3xl font-bold text-[#f5a623]">
-              {formatCOP(data.saldo)}
-            </p>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[#2a3f55] bg-[#1e2d3d] p-5">
+            <div>
+              <p className="text-xs font-bold uppercase text-[#8b9ab0]">
+                Saldo disponible
+              </p>
+              <p className="mt-1 text-3xl font-bold text-[#f5a623]">
+                {formatCOP(data.saldo)}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOpenDepositar(true)}
+                className={buttonGold('px-4 py-2')}
+              >
+                Depositar
+              </button>
+              <button
+                onClick={() => setOpenRetirar(true)}
+                className="rounded border border-[#2a3f55] px-4 py-2 text-sm font-bold uppercase text-white transition hover:border-[#f5a623] hover:text-[#f5a623]"
+              >
+                Retirar
+              </button>
+            </div>
           </div>
 
           <p className="mb-2 text-xs font-bold uppercase text-[#f5a623]">
@@ -316,6 +398,90 @@ export default function CuentaPage() {
                 className={buttonGold('w-full')}
               >
                 {savingApuesta ? 'Guardando...' : 'Crear Apuesta'}
+              </button>
+            </form>
+          </Modal>
+
+          <Modal
+            open={openDepositar}
+            onClose={cerrarModalDepositar}
+            title="Depositar saldo"
+          >
+            <form onSubmit={submitDepositar}>
+              <Field label="Monto (COP)">
+                <input
+                  type="number"
+                  className={inputClass}
+                  placeholder="100000"
+                  value={montoDeposito}
+                  onChange={(e) => setMontoDeposito(e.target.value)}
+                />
+              </Field>
+              <Field label="Método de pago">
+                <select
+                  className={inputClass}
+                  value={metodoPagoDeposito}
+                  onChange={(e) => setMetodoPagoDeposito(e.target.value)}
+                >
+                  <option value="NEQUI">Nequi</option>
+                  <option value="PSE">PSE</option>
+                  <option value="TARJETA">Tarjeta</option>
+                </select>
+              </Field>
+              {errorDeposito && (
+                <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                  {errorDeposito}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={savingDeposito || !montoDeposito}
+                className={buttonGold('w-full')}
+              >
+                {savingDeposito ? 'Depositando...' : 'Depositar'}
+              </button>
+            </form>
+          </Modal>
+
+          <Modal
+            open={openRetirar}
+            onClose={cerrarModalRetirar}
+            title="Retirar saldo"
+          >
+            <form onSubmit={submitRetirar}>
+              <Field label="Monto (COP)">
+                <input
+                  type="number"
+                  className={inputClass}
+                  placeholder="50000"
+                  value={montoRetiro}
+                  onChange={(e) => setMontoRetiro(e.target.value)}
+                />
+              </Field>
+              <Field label="Método de retiro">
+                <select className={inputClass} value="NEQUI" disabled>
+                  <option value="NEQUI">Nequi</option>
+                </select>
+              </Field>
+              <Field label="Número de cuenta / celular">
+                <input
+                  className={inputClass}
+                  placeholder="Ej: 3001234567"
+                  value={cuentaDestino}
+                  onChange={(e) => setCuentaDestino(e.target.value)}
+                />
+              </Field>
+              {errorRetiro && (
+                <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                  {errorRetiro}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={savingRetiro || !montoRetiro || !cuentaDestino.trim()}
+                className={buttonGold('w-full')}
+              >
+                {savingRetiro ? 'Retirando...' : 'Retirar'}
               </button>
             </form>
           </Modal>
