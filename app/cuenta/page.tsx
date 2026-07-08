@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import useSWR from 'swr'
-import { BASE_URL, fetcher, formatCOP } from '@/lib/api'
+import useSWR, { mutate } from 'swr'
+import { BASE_URL, fetcher, formatCOP, mensajeError, postJSON } from '@/lib/api'
 import type { Evento, HistorialApostador, Usuario } from '@/lib/types'
-import { EmptyState, PageHeader, SkeletonRows, StatusBadge } from '@/components/win/shared'
+import { Field, inputClass, Modal } from '@/components/win/modal'
+import {
+  EmptyState,
+  FloatingAddButton,
+  PageHeader,
+  SkeletonRows,
+  StatusBadge,
+  buttonGold,
+} from '@/components/win/shared'
 import { cn } from '@/lib/utils'
 
 const TIPO_LABELS: Record<string, string> = {
@@ -56,6 +64,56 @@ export default function CuentaPage() {
 
   const key = usuarioId ? `${BASE_URL}/apuestas/usuario/${usuarioId}` : null
   const { data, isLoading } = useSWR<HistorialApostador>(key, fetcher)
+
+  const { data: eventos } = useSWR<Evento[]>(`${BASE_URL}/eventos`, fetcher)
+
+  const [openApuesta, setOpenApuesta] = useState(false)
+  const [eventoId, setEventoId] = useState('')
+  const [mercadoId, setMercadoId] = useState('')
+  const [opcionId, setOpcionId] = useState('')
+  const [monto, setMonto] = useState('')
+  const [savingApuesta, setSavingApuesta] = useState(false)
+  const [errorApuesta, setErrorApuesta] = useState('')
+
+  const eventosAbiertos = eventos?.filter((e) => e.estado === 'ABIERTO') ?? []
+  const mercados =
+    eventosAbiertos.find((e) => String(e.id) === eventoId)?.mercados ?? []
+  const opciones =
+    mercados.find((m) => String(m.id) === mercadoId)?.opciones ?? []
+
+  function resetFormApuesta() {
+    setEventoId('')
+    setMercadoId('')
+    setOpcionId('')
+    setMonto('')
+  }
+
+  function cerrarModalApuesta() {
+    setOpenApuesta(false)
+    resetFormApuesta()
+    setErrorApuesta('')
+  }
+
+  async function submitApuesta(e: React.FormEvent) {
+    e.preventDefault()
+    if (!usuarioId || !opcionId || !monto) return
+    setSavingApuesta(true)
+    setErrorApuesta('')
+    try {
+      await postJSON(`${BASE_URL}/apuestas`, {
+        apostador: { id: usuarioId },
+        opcion: { id: Number(opcionId) },
+        monto: Number(monto),
+      })
+      await mutate(key)
+      setOpenApuesta(false)
+      resetFormApuesta()
+    } catch (err) {
+      setErrorApuesta(mensajeError(err, 'registrar la apuesta'))
+    } finally {
+      setSavingApuesta(false)
+    }
+  }
 
   return (
     <div className="p-4">
@@ -171,6 +229,96 @@ export default function CuentaPage() {
               <EmptyState message="No hay movimientos registrados" />
             )}
           </div>
+        </>
+      )}
+
+      {usuarioId && (
+        <>
+          <FloatingAddButton
+            label="Nueva Apuesta"
+            onClick={() => setOpenApuesta(true)}
+          />
+
+          <Modal
+            open={openApuesta}
+            onClose={cerrarModalApuesta}
+            title="Nueva Apuesta"
+          >
+            <form onSubmit={submitApuesta}>
+              <Field label="Evento (ABIERTO)">
+                <select
+                  className={inputClass}
+                  value={eventoId}
+                  onChange={(e) => {
+                    setEventoId(e.target.value)
+                    setMercadoId('')
+                    setOpcionId('')
+                  }}
+                >
+                  <option value="">Selecciona un evento</option>
+                  {eventosAbiertos.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {nombreEvento(ev)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Mercado">
+                <select
+                  className={inputClass}
+                  value={mercadoId}
+                  disabled={!eventoId}
+                  onChange={(e) => {
+                    setMercadoId(e.target.value)
+                    setOpcionId('')
+                  }}
+                >
+                  <option value="">Selecciona un mercado</option>
+                  {mercados.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nombre}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Opción">
+                <select
+                  className={inputClass}
+                  value={opcionId}
+                  disabled={!mercadoId}
+                  onChange={(e) => setOpcionId(e.target.value)}
+                >
+                  <option value="">Selecciona una opción</option>
+                  {opciones.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.nombre} (cuota {o.cuotaActual.toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Monto (COP)">
+                <input
+                  type="number"
+                  className={inputClass}
+                  placeholder="50000"
+                  value={monto}
+                  onChange={(e) => setMonto(e.target.value)}
+                />
+              </Field>
+              {errorApuesta && (
+                <p className="mb-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+                  {errorApuesta}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={savingApuesta || !opcionId || !monto}
+                className={buttonGold('w-full')}
+              >
+                {savingApuesta ? 'Guardando...' : 'Crear Apuesta'}
+              </button>
+            </form>
+          </Modal>
         </>
       )}
     </div>
