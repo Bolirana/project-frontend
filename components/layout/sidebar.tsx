@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import useSWR from 'swr'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CalendarClock,
   ChevronDown,
@@ -18,7 +18,7 @@ import {
   Users,
 } from 'lucide-react'
 import { BASE_URL, fetcher, splitTeams } from '@/lib/api'
-import type { Evento } from '@/lib/types'
+import type { Evento, Usuario } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const POPULAR = [
@@ -86,6 +86,25 @@ export function Sidebar() {
     fetcher,
   )
 
+  // Igual que TopNavbar: se relee en cada cambio de ruta porque este
+  // componente no se remonta entre navegaciones client-side.
+  const [usuario, setUsuario] = useState<Usuario | null>(null)
+  useEffect(() => {
+    const guardado = localStorage.getItem('usuario')
+    if (!guardado) {
+      setUsuario(null)
+      return
+    }
+    try {
+      setUsuario(JSON.parse(guardado))
+    } catch {
+      localStorage.removeItem('usuario')
+      setUsuario(null)
+    }
+  }, [pathname])
+
+  const esAdministrador = usuario?.rol === 'ADMINISTRADOR'
+
   return (
     <aside className="win-scroll hidden w-[280px] shrink-0 overflow-y-auto border-r border-[#2a3f55] bg-[#111827] lg:block">
       <div className="p-3">
@@ -115,33 +134,37 @@ export function Sidebar() {
         })}
       </nav>
 
-      <SectionTitle>Gestión</SectionTitle>
-      <nav>
-        {GESTION.map((item) => {
-          const Icon = item.icon
-          const active = pathname === item.href
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 border-l-2 px-4 py-2 text-sm font-medium uppercase tracking-wide transition',
-                active
-                  ? 'border-[#f5a623] bg-[#1a2332] text-white'
-                  : 'border-transparent text-white hover:bg-[#1a2332]',
-              )}
-            >
-              <Icon
-                className={cn(
-                  'h-4 w-4',
-                  active ? 'text-[#f5a623]' : 'text-[#8b9ab0]',
-                )}
-              />
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
+      {esAdministrador && (
+        <>
+          <SectionTitle>Gestión</SectionTitle>
+          <nav>
+            {GESTION.map((item) => {
+              const Icon = item.icon
+              const active = pathname === item.href
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 border-l-2 px-4 py-2 text-sm font-medium uppercase tracking-wide transition',
+                    active
+                      ? 'border-[#f5a623] bg-[#1a2332] text-white'
+                      : 'border-transparent text-white hover:bg-[#1a2332]',
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-4 w-4',
+                      active ? 'text-[#f5a623]' : 'text-[#8b9ab0]',
+                    )}
+                  />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+        </>
+      )}
 
       <SectionTitle>Eventos</SectionTitle>
       <div className="pb-6">
