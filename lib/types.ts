@@ -84,3 +84,10 @@ export type ExposicionEvento = {
   nombreEvento: string
   mercados: ExposicionMercado[]
 }
+
+// RF-22: Respuesta de GET /api/apuestas/usuario/{id}
+export type HistorialApostador = {
+  saldo: number
+  apuestas: Apuesta[]
+  movimientos: MovimientoSaldo[]
+}

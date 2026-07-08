@@ -16,17 +16,28 @@ import {
   Star,
   Trophy,
   Users,
+  Wallet,
 } from 'lucide-react'
 import { BASE_URL, fetcher, splitTeams } from '@/lib/api'
 import type { Evento, Usuario } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-const POPULAR = [
-  { label: 'MIS APUESTAS', icon: Receipt, href: '/apuestas' },
-  { label: 'DESTACADOS', icon: Star, href: '/' },
-  { label: 'EN VIVO AHORA', icon: Radio, href: '/' },
-  { label: 'COMENZANDO PRONTO', icon: CalendarClock, href: '/' },
-]
+// Para APOSTADOR, "MIS APUESTAS" se reemplaza por "MI CUENTA" (RF-22):
+// ADMINISTRADOR ya tiene /apuestas completo en Gestión, así que ese
+// primer ítem solo cambia para el rol que de verdad necesita /cuenta.
+function construirPopular(rol: Usuario['rol'] | undefined) {
+  const primerItem =
+    rol === 'APOSTADOR'
+      ? { label: 'MI CUENTA', icon: Wallet, href: '/cuenta' }
+      : { label: 'MIS APUESTAS', icon: Receipt, href: '/apuestas' }
+
+  return [
+    primerItem,
+    { label: 'DESTACADOS', icon: Star, href: '/' },
+    { label: 'EN VIVO AHORA', icon: Radio, href: '/' },
+    { label: 'COMENZANDO PRONTO', icon: CalendarClock, href: '/' },
+  ]
+}
 
 const GESTION = [
   { label: 'EVENTOS', icon: Trophy, href: '/eventos' },
@@ -104,6 +115,7 @@ export function Sidebar() {
   }, [pathname])
 
   const esAdministrador = usuario?.rol === 'ADMINISTRADOR'
+  const popularItems = construirPopular(usuario?.rol)
 
   return (
     <aside className="win-scroll hidden w-[280px] shrink-0 overflow-y-auto border-r border-[#2a3f55] bg-[#111827] lg:block">
@@ -119,7 +131,7 @@ export function Sidebar() {
 
       <SectionTitle>Popular</SectionTitle>
       <nav>
-        {POPULAR.map((item) => {
+        {popularItems.map((item) => {
           const Icon = item.icon
           return (
             <Link

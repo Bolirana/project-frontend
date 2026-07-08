@@ -8,7 +8,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 // real (alguien podría falsificarla desde devtools). El backend tampoco
 // valida el rol de quien llama a sus endpoints todavía, así que esto es una
 // protección de navegación, no de datos.
-const RUTAS_PUBLICAS = ['/login', '/']
+const RUTAS_PUBLICAS = ['/login', '/', '/cuenta']
 
 const RUTAS_ADMINISTRADOR = [
   '/usuarios',
