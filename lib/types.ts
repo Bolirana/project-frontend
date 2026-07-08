@@ -25,6 +25,7 @@ export type Usuario = {
   correo: string
   saldo: number
   estado: 'ACTIVO' | 'SUSPENDIDO' | 'ELIMINADO'
+  rol: 'ADMINISTRADOR' | 'APOSTADOR'
 }
 
 export type OpcionApuesta = {
@@ -51,4 +52,35 @@ export type MovimientoSaldo = {
   tipo: string
   monto: number
   creadoEn?: string
+}
+
+// RF-14: sugerencia de ajuste de cuota para una opción cuya exposición superó el límite.
+export type SugerenciaCuota = {
+  cuotaActual: number
+  cuotaSugerida: number
+  razon: string
+} | null
+
+// RF-12/RF-13: exposición económica de una opción y su estado de alerta de riesgo.
+export type ExposicionOpcion = {
+  opcionId: number
+  nombreOpcion: string
+  cuotaActual: number
+  exposicion: number
+  limiteAlerta: number
+  alerta: boolean
+  sugerencia: SugerenciaCuota
+}
+
+export type ExposicionMercado = {
+  mercadoId: number
+  nombreMercado: string
+  opciones: ExposicionOpcion[]
+}
+
+// Respuesta de GET /api/riesgo/exposicion/{eventoId}
+export type ExposicionEvento = {
+  eventoId: number
+  nombreEvento: string
+  mercados: ExposicionMercado[]
 }

@@ -12,6 +12,7 @@ import {
   Radio,
   Receipt,
   Search,
+  ShieldAlert,
   Star,
   Trophy,
   Users,
@@ -33,6 +34,7 @@ const GESTION = [
   { label: 'USUARIOS', icon: Users, href: '/usuarios' },
   { label: 'MERCADOS', icon: LayoutGrid, href: '/mercados' },
   { label: 'MOVIMIENTOS', icon: CircleDollarSign, href: '/movimientos' },
+  { label: 'RIESGO', icon: ShieldAlert, href: '/riesgo' },
 ]
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
