@@ -406,10 +406,6 @@ export default function EventosPage() {
       >
         <form onSubmit={submit}>
           <div className="mb-4 space-y-3 rounded-md border border-[#2a3f55] bg-[#0d1117] p-3">
-            <p className="text-xs font-bold uppercase text-[#00bfff]">
-              RF-04 · Datos externos (opcional)
-            </p>
-
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Field label="ID de equipo (TheSportsDB)">
